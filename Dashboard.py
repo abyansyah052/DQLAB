@@ -1,8 +1,8 @@
-
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import os
 
 # ============================================
 # CONFIG
@@ -13,18 +13,16 @@ st.set_page_config(
     layout="wide"
 )
 
-import os
-
 # Deteksi path otomatis
 BASE = os.path.dirname(os.path.abspath(__file__))
 
-orders        = pd.read_csv(os.path.join(BASE, "orders-5.csv"))
+orders        = pd.read_csv(os.path.join(BASE, "orders.csv"))
 order_details = pd.read_csv(os.path.join(BASE, "order_details.csv"))
-customers     = pd.read_csv(os.path.join(BASE, "customers-2.csv"))
-products      = pd.read_csv(os.path.join(BASE, "products-6.csv"))
+customers     = pd.read_csv(os.path.join(BASE, "customers.csv"))
+products      = pd.read_csv(os.path.join(BASE, "products.csv"))
 categories    = pd.read_csv(os.path.join(BASE, "categories.csv"))
-employees     = pd.read_csv(os.path.join(BASE, "employees-3.csv"))
-shippers      = pd.read_csv(os.path.join(BASE, "shippers-7.csv"))
+employees     = pd.read_csv(os.path.join(BASE, "employees.csv"))
+shippers      = pd.read_csv(os.path.join(BASE, "shippers.csv"))
 
 # Fix kolom tanggal
 orders['orderDate']    = pd.to_datetime(orders['orderDate'])
