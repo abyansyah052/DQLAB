@@ -13,16 +13,18 @@ st.set_page_config(
     layout="wide"
 )
 
-# ============================================
-# LOAD DATA (dari CSV langsung)
-# ============================================
-orders       = pd.read_csv("orders-5.csv")
-order_details= pd.read_csv("order_details.csv")
-customers    = pd.read_csv("customers-2.csv")
-products     = pd.read_csv("products-6.csv")
-categories   = pd.read_csv("categories.csv")
-employees    = pd.read_csv("employees-3.csv")
-shippers     = pd.read_csv("shippers-7.csv")
+import os
+
+# Deteksi path otomatis
+BASE = os.path.dirname(os.path.abspath(__file__))
+
+orders        = pd.read_csv(os.path.join(BASE, "orders-5.csv"))
+order_details = pd.read_csv(os.path.join(BASE, "order_details.csv"))
+customers     = pd.read_csv(os.path.join(BASE, "customers-2.csv"))
+products      = pd.read_csv(os.path.join(BASE, "products-6.csv"))
+categories    = pd.read_csv(os.path.join(BASE, "categories.csv"))
+employees     = pd.read_csv(os.path.join(BASE, "employees-3.csv"))
+shippers      = pd.read_csv(os.path.join(BASE, "shippers-7.csv"))
 
 # Fix kolom tanggal
 orders['orderDate']    = pd.to_datetime(orders['orderDate'])
