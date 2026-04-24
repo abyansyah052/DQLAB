@@ -16,13 +16,13 @@ st.set_page_config(
 # Deteksi path otomatis
 BASE = os.path.dirname(os.path.abspath(__file__))
 
-orders        = pd.read_csv(os.path.join(BASE, "orders.csv"))
-order_details = pd.read_csv(os.path.join(BASE, "order_details.csv"))
-customers     = pd.read_csv(os.path.join(BASE, "customers.csv"))
-products      = pd.read_csv(os.path.join(BASE, "products.csv"))
-categories    = pd.read_csv(os.path.join(BASE, "categories.csv"))
-employees     = pd.read_csv(os.path.join(BASE, "employees.csv"))
-shippers      = pd.read_csv(os.path.join(BASE, "shippers.csv"))
+orders        = pd.read_csv(os.path.join(BASE, "orders.csv"),        encoding='latin-1')
+order_details = pd.read_csv(os.path.join(BASE, "order_details.csv"), encoding='latin-1')
+customers     = pd.read_csv(os.path.join(BASE, "customers.csv"),     encoding='latin-1')
+products      = pd.read_csv(os.path.join(BASE, "products.csv"),      encoding='latin-1')
+categories    = pd.read_csv(os.path.join(BASE, "categories.csv"),    encoding='latin-1')
+employees     = pd.read_csv(os.path.join(BASE, "employees.csv"),     encoding='latin-1')
+shippers      = pd.read_csv(os.path.join(BASE, "shippers.csv"),      encoding='latin-1')
 
 # Fix kolom tanggal
 orders['orderDate']    = pd.to_datetime(orders['orderDate'])
