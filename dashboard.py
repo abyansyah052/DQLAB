@@ -4,388 +4,482 @@ import plotly.graph_objects as go
 import pandas as pd
 import os
 
-# ─── CONFIG ───────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Northwind Traders | Dashboard",
-    page_icon="📦",
+    page_title="Northwind Traders Analytics",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ─── CUSTOM CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Background */
-    .stApp { background-color: #F0F4F8; }
-    
-    /* Sidebar */
+    .stApp { background-color: #FFFFFF; }
+
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%);
+        background: linear-gradient(180deg, #0D47A1 0%, #1565C0 100%);
     }
-    section[data-testid="stSidebar"] * { color: white !important; }
-    section[data-testid="stSidebar"] .stSelectbox label { color: #BBDEFB !important; }
+    section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
+    section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div {
+        background: rgba(255,255,255,0.15) !important;
+        border: 1px solid rgba(255,255,255,0.35) !important;
+        color: white !important;
+    }
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
+        background: rgba(255,255,255,0.08);
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-bottom: 4px;
+        cursor: pointer;
+    }
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
+        background: rgba(255,255,255,0.18);
+    }
+    section[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.25) !important; }
 
-    /* Metric cards */
     div[data-testid="metric-container"] {
-        background: white;
-        border: none;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-left: 4px solid #1A73E8;
+        background: #F0F7FF;
+        border: 1px solid #BFDBFE;
+        border-top: 3px solid #1565C0;
+        border-radius: 8px;
+        padding: 14px 18px;
     }
-    div[data-testid="metric-container"] label { color: #5F6368 !important; font-size: 13px !important; }
+    div[data-testid="metric-container"] label {
+        color: #6B7280 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    /* FIX: responsive font agar tidak overflow di layar kecil */
     div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        color: #1A73E8 !important; font-size: 28px !important; font-weight: 700 !important;
+        color: #111827 !important;
+        font-size: clamp(16px, 1.8vw, 26px) !important;
+        font-weight: 800 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    /* Section headers */
-    .section-header {
-        background: linear-gradient(90deg, #1A73E8, #0D47A1);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 10px;
-        margin: 20px 0 15px 0;
-        font-size: 20px;
-        font-weight: 700;
-    }
-
-    /* Chart containers */
     div[data-testid="stPlotlyChart"] {
-        background: white;
-        border-radius: 12px;
-        padding: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+        background: #FFFFFF;
     }
 
-    /* Hide hamburger */
-    #MainMenu, footer { visibility: hidden; }
+    footer { visibility: hidden; }
+    #MainMenu { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── LOAD DATA ────────────────────────────────────────────────────────────────
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 @st.cache_data
 def load_data():
-    orders        = pd.read_csv(os.path.join(BASE, "orders.csv"),        encoding='latin-1')
-    order_details = pd.read_csv(os.path.join(BASE, "order_details.csv"), encoding='latin-1')
-    customers     = pd.read_csv(os.path.join(BASE, "customers.csv"),     encoding='latin-1')
-    products      = pd.read_csv(os.path.join(BASE, "products.csv"),      encoding='latin-1')
-    categories    = pd.read_csv(os.path.join(BASE, "categories.csv"),    encoding='latin-1')
-    employees     = pd.read_csv(os.path.join(BASE, "employees.csv"),     encoding='latin-1')
-    shippers      = pd.read_csv(os.path.join(BASE, "shippers.csv"),      encoding='latin-1')
+    orders        = pd.read_csv(os.path.join(BASE, "orders.csv"),        encoding="latin-1")
+    order_details = pd.read_csv(os.path.join(BASE, "order_details.csv"), encoding="latin-1")
+    customers     = pd.read_csv(os.path.join(BASE, "customers.csv"),     encoding="latin-1")
+    products      = pd.read_csv(os.path.join(BASE, "products.csv"),      encoding="latin-1")
+    categories    = pd.read_csv(os.path.join(BASE, "categories.csv"),    encoding="latin-1")
+    employees     = pd.read_csv(os.path.join(BASE, "employees.csv"),     encoding="latin-1")
+    shippers      = pd.read_csv(os.path.join(BASE, "shippers.csv"),      encoding="latin-1")
 
     customers.columns = customers.columns.str.strip()
-    customers = customers.rename(columns={'city': 'customer_city', 'country': 'customer_country'})
+    customers = customers.rename(columns={"city": "customer_city", "country": "customer_country"})
 
-    orders['orderDate']    = pd.to_datetime(orders['orderDate'])
-    orders['shippedDate']  = pd.to_datetime(orders['shippedDate'],  errors='coerce')
-    orders['requiredDate'] = pd.to_datetime(orders['requiredDate'], errors='coerce')
-    orders['year']  = orders['orderDate'].dt.year
-    orders['month'] = orders['orderDate'].dt.to_period('M').astype(str)
+    orders["orderDate"]    = pd.to_datetime(orders["orderDate"])
+    orders["shippedDate"]  = pd.to_datetime(orders["shippedDate"],  errors="coerce")
+    orders["requiredDate"] = pd.to_datetime(orders["requiredDate"], errors="coerce")
+    orders["year"]  = orders["orderDate"].dt.year
+    orders["month"] = orders["orderDate"].dt.to_period("M").astype(str)
 
-    order_details['revenue'] = (
-        order_details['quantity'] * order_details['unitPrice'] * (1 - order_details['discount'])
+    order_details["revenue"] = (
+        order_details["quantity"] * order_details["unitPrice"] * (1 - order_details["discount"])
     )
 
     df = (order_details
-          .merge(orders,     on='orderID')
-          .merge(customers,  on='customerID')
-          .merge(products,   on='productID')
-          .merge(categories, on='categoryID')
-          .merge(employees,  on='employeeID'))
+          .merge(orders,     on="orderID")
+          .merge(customers,  on="customerID")
+          .merge(products,   on="productID")
+          .merge(categories, on="categoryID")
+          .merge(employees,  on="employeeID"))
 
     return df, orders, shippers
 
 df, orders, shippers = load_data()
 
-# ─── CHART STYLE ──────────────────────────────────────────────────────────────
-BLUE  = '#1A73E8'
-BLUES = ['#0D47A1','#1565C0','#1976D2','#1E88E5','#42A5F5','#90CAF9','#BBDEFB']
-RED   = '#EA4335'
+# ── COLOR CONSTANTS ──────────────────────────────────────────────────────────
+C_BLUE_DARK   = "#0D47A1"
+C_BLUE        = "#1565C0"
+C_BLUE_MID    = "#1976D2"
+C_BLUE_LIGHT  = "#2196F3"
+C_BLUE_SOFT   = "#42A5F5"
+C_RED         = "#C62828"
+C_GREEN       = "#2E7D32"
+C_ORANGE      = "#E65100"
+C_TEAL        = "#00695C"
+C_PURPLE      = "#4527A0"
 
-def style(fig, height=380):
+# PALETTE_BLUE dihapus — tidak digunakan di mana pun (dead code)
+PALETTE_DIV = [C_BLUE_DARK, C_BLUE_MID, C_BLUE_LIGHT, C_TEAL, C_PURPLE, C_ORANGE, C_RED, "#37474F"]
+
+# ── HELPER: style chart ───────────────────────────────────────────────────────
+def style(fig, height=360, showlegend=True, rotated_labels=False):
+    # FIX: rotated_labels=True → margin bawah lebih besar agar label tidak terpotong
+    bottom_margin = 60 if rotated_labels else 8
     fig.update_layout(
-        plot_bgcolor='white', paper_bgcolor='white',
-        font=dict(family='Inter, Arial', size=12, color='#3C4043'),
-        margin=dict(l=10, r=10, t=40, b=10),
+        plot_bgcolor="#FFFFFF",
+        paper_bgcolor="#FFFFFF",
+        font=dict(family="Inter, Arial, sans-serif", size=12, color="#374151"),
         height=height,
-        title_font=dict(size=14, color='#1A73E8', family='Inter, Arial'),
-        legend=dict(bgcolor='rgba(0,0,0,0)', borderwidth=0)
+        margin=dict(l=8, r=8, t=44, b=bottom_margin),
+        title_font=dict(size=13, color="#111827", family="Inter, Arial, sans-serif"),
+        showlegend=showlegend,
+        legend=dict(bgcolor="rgba(0,0,0,0)", borderwidth=0, font=dict(size=11))
     )
-    fig.update_xaxes(showgrid=True, gridcolor='#F1F3F4', tickfont=dict(size=11))
-    fig.update_yaxes(showgrid=True, gridcolor='#F1F3F4', tickfont=dict(size=11))
+    fig.update_xaxes(showgrid=True, gridcolor="#F3F4F6", linecolor="#E5E7EB",
+                     tickfont=dict(size=11, color="#6B7280"))
+    fig.update_yaxes(showgrid=True, gridcolor="#F3F4F6", linecolor="#E5E7EB",
+                     tickfont=dict(size=11, color="#6B7280"))
     return fig
 
-# ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+def page_header(title, subtitle=""):
+    st.markdown(
+        f'''<div style="border-left:4px solid #1565C0;padding:4px 0 4px 14px;margin-bottom:20px;">
+        <div style="font-size:20px;font-weight:700;color:#111827;">{title}</div>
+        <div style="font-size:13px;color:#6B7280;">{subtitle}</div></div>''',
+        unsafe_allow_html=True
+    )
+
+# ── SIDEBAR ──────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 📦 Northwind Traders")
-    st.markdown("*Analytics Dashboard*")
+    st.markdown('<div style="font-size:16px;font-weight:700;letter-spacing:0.02em;margin-bottom:2px;">Northwind Traders</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:11px;opacity:0.75;margin-bottom:12px;">Business Analytics Dashboard</div>', unsafe_allow_html=True)
     st.markdown("---")
 
-    st.markdown("### 🔍 Filters")
-
-    # Page selector
-    page = st.radio("📄 Navigate to", [
-        "📊 Executive Summary",
-        "🛍️ Product Analysis",
-        "👥 Customer Analysis",
-        "⚙️ Operations"
+    page = st.radio("Navigation", [
+        "Executive Summary",
+        "Product Analysis",
+        "Customer Analysis",
+        "Operations Performance"
     ])
 
     st.markdown("---")
+    st.markdown('<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;opacity:0.8;margin-bottom:8px;">FILTERS</div>', unsafe_allow_html=True)
 
-    # Year filter
-    years = ["All"] + sorted(df['year'].dropna().unique().astype(str).tolist())
-    sel_year = st.selectbox("📅 Year", years)
+    years = ["All"] + sorted(df["year"].dropna().unique().astype(str).tolist())
+    sel_year = st.selectbox("Year", years)
 
-    # Country filter
-    countries = ["All"] + sorted(df['customer_country'].dropna().unique().tolist())
-    sel_country = st.selectbox("🌍 Country", countries)
+    countries = ["All"] + sorted(df["customer_country"].dropna().unique().tolist())
+    sel_country = st.selectbox("Country", countries)
 
-    # Category filter
-    cats = ["All"] + sorted(df['categoryName'].dropna().unique().tolist())
-    sel_cat = st.selectbox("📦 Category", cats)
+    cats = ["All"] + sorted(df["categoryName"].dropna().unique().tolist())
+    sel_cat = st.selectbox("Category", cats)
 
     st.markdown("---")
-    st.markdown("**Data Period**")
-    st.markdown(f"🗓️ {df['orderDate'].min().strftime('%b %Y')} – {df['orderDate'].max().strftime('%b %Y')}")
-    st.markdown(f"📋 {df['orderID'].nunique():,} total orders")
+    st.markdown(f'<div style="font-size:11px;opacity:0.8;">Period: {df["orderDate"].min().strftime("%b %Y")} - {df["orderDate"].max().strftime("%b %Y")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size:11px;opacity:0.8;">Total Records: {len(df):,}</div>', unsafe_allow_html=True)
 
-# ─── APPLY FILTERS ────────────────────────────────────────────────────────────
+# ── APPLY FILTERS ─────────────────────────────────────────────────────────────
 dff = df.copy()
-if sel_year    != "All": dff = dff[dff['year'].astype(str) == sel_year]
-if sel_country != "All": dff = dff[dff['customer_country'] == sel_country]
-if sel_cat     != "All": dff = dff[dff['categoryName'] == sel_cat]
+if sel_year    != "All": dff = dff[dff["year"].astype(str) == sel_year]
+if sel_country != "All": dff = dff[dff["customer_country"] == sel_country]
+if sel_cat     != "All": dff = dff[dff["categoryName"] == sel_cat]
+
+# FIX: Empty state guard — mencegah crash saat filter terlalu ketat
+if dff.empty:
+    st.warning("⚠️ Tidak ada data untuk kombinasi filter yang dipilih. Coba ubah filter di sidebar.")
+    st.stop()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 1 — EXECUTIVE SUMMARY
 # ══════════════════════════════════════════════════════════════════════════════
-if page == "📊 Executive Summary":
-    st.markdown('<div class="section-header">📊 Executive Summary</div>', unsafe_allow_html=True)
+if page == "Executive Summary":
+    page_header("Executive Summary", "High-level business performance overview")
 
-    # KPI Cards
-    total_rev   = dff['revenue'].sum()
-    total_orders= dff['orderID'].nunique()
-    total_cust  = dff['customerID'].nunique()
-    avg_ov      = dff.groupby('orderID')['revenue'].sum().mean()
-    total_qty   = dff['quantity'].sum()
+    total_rev    = dff["revenue"].sum()
+    total_orders = dff["orderID"].nunique()
+    total_cust   = dff["customerID"].nunique()
+    avg_ov       = dff.groupby("orderID")["revenue"].sum().mean()
+    total_qty    = dff["quantity"].sum()
+    avg_freight  = dff.drop_duplicates("orderID")["freight"].mean()
 
-    k1,k2,k3,k4,k5 = st.columns(5)
-    k1.metric("💰 Total Revenue",    f"${total_rev:,.0f}")
-    k2.metric("📦 Total Orders",     f"{total_orders:,}")
-    k3.metric("👥 Active Customers", f"{total_cust:,}")
-    k4.metric("🛒 Avg Order Value",  f"${avg_ov:,.0f}")
-    k5.metric("📮 Units Sold",       f"{total_qty:,}")
+    k1,k2,k3,k4,k5,k6 = st.columns(6)
+    k1.metric("Total Revenue",    f"${total_rev:,.0f}")
+    k2.metric("Total Orders",     f"{total_orders:,}")
+    k3.metric("Active Customers", f"{total_cust:,}")
+    k4.metric("Avg Order Value",  f"${avg_ov:,.0f}")
+    k5.metric("Units Sold",       f"{total_qty:,}")
+    k6.metric("Avg Freight Cost", f"${avg_freight:,.2f}")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Row 1: Revenue Trend + Revenue by Category
-    col1, col2 = st.columns([2,1])
+    col1, col2 = st.columns([3, 2])
     with col1:
-        monthly = dff.groupby('month')['revenue'].sum().reset_index().sort_values('month')
-        fig = px.area(monthly, x='month', y='revenue',
-                      title='📈 Monthly Revenue Trend',
-                      color_discrete_sequence=[BLUE])
-        fig.update_traces(fill='tozeroy', fillcolor='rgba(26,115,232,0.1)', line_color=BLUE, line_width=2.5)
-        st.plotly_chart(style(fig, 360), use_container_width=True)
+        monthly = dff.groupby("month")["revenue"].sum().reset_index().sort_values("month")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=monthly["month"], y=monthly["revenue"],
+            mode="lines+markers",
+            line=dict(color=C_BLUE, width=2.5),
+            marker=dict(size=5, color=C_BLUE),
+            fill="tozeroy",
+            fillcolor="rgba(21,101,192,0.10)",
+            name="Revenue"
+        ))
+        fig.update_layout(title="Monthly Revenue Trend", showlegend=False)
+        # FIX: rotated_labels=True agar label bulan tidak terpotong
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(style(fig, 320, False, rotated_labels=True), use_container_width=True)
     with col2:
-        cat_rev = dff.groupby('categoryName')['revenue'].sum().reset_index()
-        fig = px.pie(cat_rev, names='categoryName', values='revenue',
-                     title='🏷️ Revenue by Category',
-                     color_discrete_sequence=BLUES, hole=0.4)
-        fig.update_traces(textposition='inside', textinfo='percent+label',
-                          textfont_size=10)
-        st.plotly_chart(style(fig, 360), use_container_width=True)
+        cat_rev = dff.groupby("categoryName")["revenue"].sum().reset_index().sort_values("revenue", ascending=False)
+        fig = px.pie(cat_rev, names="categoryName", values="revenue",
+                     title="Revenue by Category",
+                     color_discrete_sequence=PALETTE_DIV, hole=0.42)
+        # FIX KRITIS: textposition="auto" + insidetextorientation="radial" agar label slice kecil tidak tumpang tindih
+        fig.update_traces(
+            textposition="auto",
+            textinfo="percent+label",
+            textfont_size=10,
+            insidetextorientation="radial"
+        )
+        st.plotly_chart(style(fig, 320), use_container_width=True)
 
-    # Row 2: Top Countries + Monthly Orders
     col1, col2 = st.columns(2)
     with col1:
-        country_rev = dff.groupby('customer_country')['revenue'].sum().reset_index().sort_values('revenue', ascending=True).tail(10)
-        fig = px.bar(country_rev, x='revenue', y='customer_country', orientation='h',
-                     title='🌍 Top 10 Countries by Revenue',
-                     color='revenue', color_continuous_scale='Blues',
-                     text='revenue')
-        fig.update_traces(texttemplate='$%{text:,.0f}', textposition='outside', textfont_size=10)
-        fig.update_coloraxes(showscale=False)
-        st.plotly_chart(style(fig, 380), use_container_width=True)
+        country_rev = dff.groupby("customer_country")["revenue"].sum().reset_index().sort_values("revenue", ascending=True).tail(10)
+        fig = px.bar(country_rev, x="revenue", y="customer_country", orientation="h",
+                     title="Top 10 Countries by Revenue")
+        fig.update_traces(marker_color=C_BLUE)
+        fig.update_xaxes(tickprefix="$")
+        st.plotly_chart(style(fig, 360, False), use_container_width=True)
     with col2:
-        monthly_orders = dff.groupby('month')['orderID'].nunique().reset_index().sort_values('month')
-        fig = px.bar(monthly_orders, x='month', y='orderID',
-                     title='📦 Monthly Order Volume',
-                     color_discrete_sequence=[BLUE])
+        monthly_orders = dff.groupby("month")["orderID"].nunique().reset_index().sort_values("month")
+        monthly_orders.columns = ["month", "order_count"]
+        fig = px.bar(monthly_orders, x="month", y="order_count",
+                     title="Monthly Order Volume")
+        fig.update_traces(marker_color=C_BLUE_MID)
+        # FIX: rotated_labels=True untuk margin bawah yang cukup
         fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(style(fig, 380), use_container_width=True)
+        st.plotly_chart(style(fig, 360, False, rotated_labels=True), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 2 — PRODUCT ANALYSIS
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "🛍️ Product Analysis":
-    st.markdown('<div class="section-header">🛍️ Product & Category Analysis</div>', unsafe_allow_html=True)
+elif page == "Product Analysis":
+    page_header("Product & Category Analysis",
+                "Identify best-performing products, high-discount items, and discontinued risk")
 
-    # KPI
-    k1,k2,k3 = st.columns(3)
-    k1.metric("🏷️ Total Products",    f"{dff['productName'].nunique():,}")
-    k2.metric("📂 Categories",         f"{dff['categoryName'].nunique():,}")
-    k3.metric("💸 Avg Discount",       f"{dff['discount'].mean()*100:.1f}%")
+    k1,k2,k3,k4 = st.columns(4)
+    k1.metric("Total Products",  f"{dff['productName'].nunique():,}")
+    k2.metric("Categories",      f"{dff['categoryName'].nunique():,}")
+    k3.metric("Avg Discount",    f"{dff['discount'].mean()*100:.1f}%")
+    k4.metric("Active Products", f"{dff[dff['discontinued']==0]['productName'].nunique():,}")
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Row 1: Top Products + Category Revenue
-    col1, col2 = st.columns([3,2])
+    col1, col2 = st.columns([3, 2])
     with col1:
-        prod_rev = dff.groupby('productName')['revenue'].sum().reset_index().sort_values('revenue', ascending=True).tail(10)
-        fig = px.bar(prod_rev, x='revenue', y='productName', orientation='h',
-                     title='🥇 Top 10 Products by Revenue',
-                     color='revenue', color_continuous_scale='Blues', text='revenue')
-        fig.update_traces(texttemplate='$%{text:,.0f}', textposition='outside', textfont_size=9)
-        fig.update_coloraxes(showscale=False)
-        st.plotly_chart(style(fig, 400), use_container_width=True)
+        prod_rev = dff.groupby("productName")["revenue"].sum().reset_index().sort_values("revenue", ascending=True).tail(10)
+        fig = px.bar(prod_rev, x="revenue", y="productName", orientation="h",
+                     title="Top 10 Products by Revenue")
+        fig.update_traces(marker_color=C_BLUE)
+        fig.update_xaxes(tickprefix="$")
+        st.plotly_chart(style(fig, 400, False), use_container_width=True)
     with col2:
-        cat_qty = dff.groupby('categoryName')['quantity'].sum().reset_index().sort_values('quantity', ascending=False)
-        fig = px.bar(cat_qty, x='categoryName', y='quantity',
-                     title='📦 Units Sold by Category',
-                     color='quantity', color_continuous_scale='Blues')
-        fig.update_layout(xaxis_tickangle=-30)
-        fig.update_coloraxes(showscale=False)
-        st.plotly_chart(style(fig, 400), use_container_width=True)
+        cat_qty = dff.groupby("categoryName")["quantity"].sum().reset_index().sort_values("quantity", ascending=False)
+        fig = px.bar(cat_qty, x="categoryName", y="quantity",
+                     title="Units Sold by Category",
+                     color="categoryName", color_discrete_sequence=PALETTE_DIV)
+        fig.update_layout(showlegend=False, xaxis_tickangle=-30)
+        # FIX: rotated_labels=True untuk label kategori yang panjang
+        st.plotly_chart(style(fig, 400, False, rotated_labels=True), use_container_width=True)
 
-    # Row 2: Discount vs Revenue Scatter + Discontinued
-    col1, col2 = st.columns([2,1])
+    col1, col2 = st.columns([2, 1])
     with col1:
-        prod_analysis = dff.groupby(['productName','categoryName']).agg(
-            revenue=('revenue','sum'), avg_discount=('discount','mean'), qty=('quantity','sum')
+        prod_an = dff.groupby(["productName","categoryName"]).agg(
+            revenue=("revenue","sum"), avg_discount=("discount","mean"), qty=("quantity","sum")
         ).reset_index()
-        fig = px.scatter(prod_analysis, x='avg_discount', y='revenue',
-                         hover_name='productName', size='qty', color='categoryName',
-                         title='💡 Discount Rate vs Revenue per Product',
-                         labels={'avg_discount':'Avg Discount Rate','revenue':'Total Revenue'},
-                         color_discrete_sequence=BLUES)
-        fig.update_traces(marker=dict(opacity=0.8, line=dict(width=1, color='white')))
+        # FIX KRITIS: size_max=40 agar bubble tidak overflow + outline abu-abu agar terlihat di bg putih
+        fig = px.scatter(prod_an, x="avg_discount", y="revenue",
+                         hover_name="productName", size="qty", color="categoryName",
+                         title="Discount Rate vs Revenue — Spot Overpriced Discounts",
+                         labels={"avg_discount":"Avg Discount Rate","revenue":"Total Revenue"},
+                         color_discrete_sequence=PALETTE_DIV,
+                         size_max=40)
+        # FIX: outline "white" diganti abu-abu tipis agar bubble tetap terpisah di background putih
+        fig.update_traces(marker=dict(opacity=0.80, line=dict(width=1.2, color="rgba(55,65,81,0.4)")))
+        fig.update_xaxes(tickformat=".0%")
+        fig.update_yaxes(tickprefix="$")
         st.plotly_chart(style(fig, 380), use_container_width=True)
     with col2:
-        disc_status = dff.groupby('discontinued')['revenue'].sum().reset_index()
-        disc_status['status'] = disc_status['discontinued'].map({0:'Active 🟢', 1:'Discontinued 🔴'})
-        fig = px.pie(disc_status, names='status', values='revenue',
-                     title='⚠️ Active vs Discontinued Revenue',
-                     color_discrete_sequence=[BLUE, RED], hole=0.45)
+        disc = dff.groupby("discontinued")["revenue"].sum().reset_index()
+        disc["status"] = disc["discontinued"].map({0: "Active", 1: "Discontinued"})
+        fig = px.pie(disc, names="status", values="revenue",
+                     title="Active vs Discontinued Revenue",
+                     color_discrete_sequence=[C_BLUE, C_RED], hole=0.45)
+        # FIX KRITIS: textposition="auto" + insidetextorientation="radial"
+        fig.update_traces(
+            textposition="auto",
+            textinfo="percent+label",
+            textfont_size=11,
+            insidetextorientation="radial"
+        )
         st.plotly_chart(style(fig, 380), use_container_width=True)
+
+    # FIX: rotated_labels=True untuk label bulan yang padat
+    cat_monthly = dff.groupby(["month","categoryName"])["revenue"].sum().reset_index().sort_values("month")
+    fig = px.line(cat_monthly, x="month", y="revenue", color="categoryName",
+                  title="Monthly Revenue Trend by Category",
+                  color_discrete_sequence=PALETTE_DIV,
+                  labels={"revenue":"Revenue","month":"Month"})
+    fig.update_layout(xaxis_tickangle=-45)
+    fig.update_yaxes(tickprefix="$")
+    st.plotly_chart(style(fig, 300, True, rotated_labels=True), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 3 — CUSTOMER ANALYSIS
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "👥 Customer Analysis":
-    st.markdown('<div class="section-header">👥 Customer Analysis</div>', unsafe_allow_html=True)
+elif page == "Customer Analysis":
+    page_header("Customer Analysis",
+                "Identify most valuable customers and high-potential markets")
 
     k1,k2,k3 = st.columns(3)
-    k1.metric("👥 Total Customers",    f"{dff['customerID'].nunique():,}")
-    k2.metric("🌍 Countries Served",   f"{dff['customer_country'].nunique():,}")
-    k3.metric("📦 Avg Orders/Customer",f"{dff.groupby('customerID')['orderID'].nunique().mean():.1f}")
+    k1.metric("Total Customers",     f"{dff['customerID'].nunique():,}")
+    k2.metric("Countries Served",    f"{dff['customer_country'].nunique():,}")
+    k3.metric("Avg Orders/Customer", f"{dff.groupby('customerID')['orderID'].nunique().mean():.1f}")
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns([3,2])
+    col1, col2 = st.columns([3, 2])
     with col1:
-        top_cust = dff.groupby(['companyName','customer_country'])['revenue'].sum().reset_index()
-        top_cust = top_cust.sort_values('revenue', ascending=True).tail(10)
-        fig = px.bar(top_cust, x='revenue', y='companyName', orientation='h',
-                     title='🏆 Top 10 Customers by Revenue',
-                     color='customer_country',
-                     color_discrete_sequence=BLUES, text='revenue')
-        fig.update_traces(texttemplate='$%{text:,.0f}', textposition='outside', textfont_size=9)
+        top_cust = (dff.groupby(["companyName","customer_country"])["revenue"]
+                    .sum().reset_index()
+                    .sort_values("revenue", ascending=True).tail(10))
+        fig = px.bar(top_cust, x="revenue", y="companyName", orientation="h",
+                     title="Top 10 Customers by Revenue",
+                     color="customer_country", color_discrete_sequence=PALETTE_DIV)
+        fig.update_xaxes(tickprefix="$")
         st.plotly_chart(style(fig, 400), use_container_width=True)
     with col2:
-        country_orders = dff.groupby('customer_country').agg(
-            total_orders=('orderID','nunique'), total_revenue=('revenue','sum')
-        ).reset_index().sort_values('total_revenue', ascending=False).head(8)
-        fig = px.bar(country_orders, x='customer_country', y='total_revenue',
-                     title='🌍 Revenue by Country',
-                     color='total_revenue', color_continuous_scale='Blues')
-        fig.update_layout(xaxis_tickangle=-30)
-        fig.update_coloraxes(showscale=False)
-        st.plotly_chart(style(fig, 400), use_container_width=True)
+        cr = (dff.groupby("customer_country")
+              .agg(total_revenue=("revenue","sum"), total_orders=("orderID","nunique"))
+              .reset_index().sort_values("total_revenue", ascending=False).head(8))
+        fig = px.bar(cr, x="customer_country", y="total_revenue",
+                     title="Revenue by Country (Top 8)",
+                     color="total_orders",
+                     color_continuous_scale=[[0, C_BLUE_SOFT],[0.5, C_BLUE],[1, C_BLUE_DARK]])
+        fig.update_yaxes(tickprefix="$")
+        fig.update_layout(xaxis_tickangle=-30, coloraxis_colorbar=dict(title="Orders"))
+        # FIX: rotated_labels=True
+        st.plotly_chart(style(fig, 400, True, rotated_labels=True), use_container_width=True)
 
-    # Geo map + Customer order frequency
-    col1, col2 = st.columns([3,2])
+    col1, col2 = st.columns([3, 2])
     with col1:
-        geo = dff.groupby('customer_country')['revenue'].sum().reset_index()
-        fig = px.choropleth(geo, locations='customer_country', locationmode='country names',
-                            color='revenue', title='🗺️ Revenue Heatmap by Country',
-                            color_continuous_scale='Blues')
-        fig.update_layout(geo=dict(showframe=False, showcoastlines=True, bgcolor='white'))
-        st.plotly_chart(style(fig, 400), use_container_width=True)
+        geo = dff.groupby("customer_country")["revenue"].sum().reset_index()
+        # FIX MODERAT: minimum #90CAF9 agar negara revenue kecil tidak tampak blank/kosong
+        fig = px.choropleth(geo, locations="customer_country", locationmode="country names",
+                            color="revenue", title="Revenue Distribution by Country (Geographic)",
+                            color_continuous_scale=[[0,"#90CAF9"],[0.5,C_BLUE_MID],[1,C_BLUE_DARK]])
+        fig.update_layout(
+            geo=dict(showframe=False, showcoastlines=True, coastlinecolor="#D1D5DB", bgcolor="white"),
+            coloraxis_colorbar=dict(title="Revenue", tickprefix="$")
+        )
+        st.plotly_chart(style(fig, 360), use_container_width=True)
     with col2:
-        cust_freq = dff.groupby('customerID')['orderID'].nunique().reset_index()
-        cust_freq.columns = ['customerID','order_count']
-        freq_bins = pd.cut(cust_freq['order_count'], bins=[0,3,7,12,20,50], labels=['1-3','4-7','8-12','13-20','20+'])
-        freq_dist = freq_bins.value_counts().sort_index().reset_index()
-        freq_dist.columns = ['frequency','count']
-        fig = px.bar(freq_dist, x='frequency', y='count',
-                     title='📊 Customer Order Frequency',
-                     color_discrete_sequence=[BLUE])
-        st.plotly_chart(style(fig, 400), use_container_width=True)
+        cust_freq = dff.groupby("customerID")["orderID"].nunique().reset_index()
+        cust_freq.columns = ["customerID","order_count"]
+        bins  = pd.cut(cust_freq["order_count"], bins=[0,3,7,12,20,50], labels=["1-3","4-7","8-12","13-20","20+"])
+        fdist = bins.value_counts().sort_index().reset_index()
+        fdist.columns = ["Range","Count"]
+        # FIX MODERAT: slice warna sesuai jumlah bar aktual — mencegah index error saat filter aktif
+        n = len(fdist)
+        bar_colors = [C_BLUE_DARK, C_BLUE, C_BLUE_MID, C_BLUE_LIGHT, C_BLUE_SOFT][:n]
+        fig = px.bar(fdist, x="Range", y="Count",
+                     title="Customer Order Frequency Segmentation")
+        fig.update_traces(marker_color=bar_colors)
+        st.plotly_chart(style(fig, 360, False), use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE 4 — OPERATIONS
+# PAGE 4 — OPERATIONS PERFORMANCE
 # ══════════════════════════════════════════════════════════════════════════════
-elif page == "⚙️ Operations":
-    st.markdown('<div class="section-header">⚙️ Operations Performance</div>', unsafe_allow_html=True)
+elif page == "Operations Performance":
+    page_header("Operations Performance",
+                "Evaluate employee contribution, shipper reliability, and delivery efficiency")
 
-    # Employee KPIs
-    k1,k2,k3 = st.columns(3)
-    k1.metric("👨‍💼 Employees",          f"{dff['employeeID'].nunique():,}")
-    k2.metric("🚚 Shippers",            "3")
-    on_time_pct = 0
-    ship_df = orders.merge(shippers, on='shipperID')
-    ship_df = ship_df[ship_df['shippedDate'].notna()].copy()
-    ship_df['delay'] = (ship_df['shippedDate'] - ship_df['requiredDate']).dt.days
-    on_time_pct = (ship_df['delay'] <= 0).mean() * 100
-    k3.metric("✅ On-Time Delivery",    f"{on_time_pct:.1f}%")
+    ship_df = orders.merge(shippers, on="shipperID")
+    ship_df = ship_df[ship_df["shippedDate"].notna()].copy()
+    ship_df["delay_days"] = (ship_df["shippedDate"] - ship_df["requiredDate"]).dt.days
+    ship_df["status"]     = ship_df["delay_days"].apply(lambda x: "On Time" if x <= 0 else "Late")
+    on_time_pct = (ship_df["delay_days"] <= 0).mean() * 100
+    late_count  = (ship_df["delay_days"] > 0).sum()
+
+    k1,k2,k3,k4 = st.columns(4)
+    k1.metric("Total Employees",  f"{dff['employeeID'].nunique():,}")
+    k2.metric("Shippers",         "3")
+    k3.metric("On-Time Delivery", f"{on_time_pct:.1f}%")
+    k4.metric("Late Deliveries",  f"{late_count:,}")
+
     st.markdown("<br>", unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
-        emp_rev = dff.groupby('employeeName').agg(
-            revenue=('revenue','sum'), orders=('orderID','nunique')
-        ).reset_index().sort_values('revenue', ascending=False)
-        fig = px.bar(emp_rev, x='employeeName', y='revenue',
-                     title='👨‍💼 Revenue Generated by Employee',
-                     color='revenue', color_continuous_scale='Blues', text='revenue')
-        fig.update_traces(texttemplate='$%{text:,.0f}', textposition='outside', textfont_size=9)
-        fig.update_coloraxes(showscale=False)
-        fig.update_layout(xaxis_tickangle=-20)
-        st.plotly_chart(style(fig, 380), use_container_width=True)
+        emp = dff.groupby("employeeName").agg(
+            revenue=("revenue","sum"), orders=("orderID","nunique")
+        ).reset_index().sort_values("revenue", ascending=False)
+        fig = px.bar(emp, x="employeeName", y="revenue",
+                     title="Revenue Generated by Employee",
+                     color="revenue",
+                     color_continuous_scale=[[0, C_BLUE_SOFT],[0.5, C_BLUE],[1, C_BLUE_DARK]])
+        fig.update_yaxes(tickprefix="$")
+        fig.update_layout(xaxis_tickangle=-15, coloraxis_showscale=False)
+        st.plotly_chart(style(fig, 340, False, rotated_labels=True), use_container_width=True)
     with col2:
-        emp_orders = emp_rev.sort_values('orders', ascending=False)
-        fig = px.bar(emp_orders, x='employeeName', y='orders',
-                     title='📦 Orders Handled by Employee',
-                     color='orders', color_continuous_scale='Blues')
-        fig.update_coloraxes(showscale=False)
-        fig.update_layout(xaxis_tickangle=-20)
-        st.plotly_chart(style(fig, 380), use_container_width=True)
+        fig = px.bar(emp.sort_values("orders", ascending=False),
+                     x="employeeName", y="orders",
+                     title="Orders Handled by Employee",
+                     color="orders",
+                     color_continuous_scale=[[0, C_BLUE_SOFT],[0.5, C_BLUE_MID],[1, C_BLUE_DARK]])
+        fig.update_layout(xaxis_tickangle=-15, coloraxis_showscale=False)
+        st.plotly_chart(style(fig, 340, False, rotated_labels=True), use_container_width=True)
 
     col1, col2 = st.columns(2)
     with col1:
-        ship_df['status'] = ship_df['delay'].apply(lambda x: 'On Time 🟢' if x <= 0 else 'Late 🔴')
-        ship_summary = ship_df.groupby(['companyName','status']).size().reset_index(name='count')
-        fig = px.bar(ship_summary, x='companyName', y='count', color='status', barmode='group',
-                     title='🚚 Shipper: On Time vs Late Deliveries',
-                     color_discrete_map={'On Time 🟢': BLUE, 'Late 🔴': RED})
-        st.plotly_chart(style(fig, 360), use_container_width=True)
+        ss = ship_df.groupby(["companyName","status"]).size().reset_index(name="count")
+        fig = px.bar(ss, x="companyName", y="count", color="status", barmode="group",
+                     title="On-Time vs Late Deliveries by Shipper",
+                     color_discrete_map={"On Time": C_BLUE, "Late": C_RED})
+        st.plotly_chart(style(fig, 320), use_container_width=True)
     with col2:
-        avg_delay = ship_df.groupby('companyName')['delay'].mean().reset_index()
-        avg_delay.columns = ['Shipper','Avg Delay (days)']
-        fig = px.bar(avg_delay, x='Shipper', y='Avg Delay (days)',
-                     title='⏱️ Avg Delivery Delay by Shipper',
-                     color='Avg Delay (days)',
-                     color_continuous_scale=[[0,'#1A73E8'],[0.5,'#FFA726'],[1,'#EA4335']])
-        fig.update_coloraxes(showscale=False)
-        fig.add_hline(y=0, line_dash='dash', line_color='gray', opacity=0.5)
-        st.plotly_chart(style(fig, 360), use_container_width=True)
+        ad = ship_df.groupby("companyName")["delay_days"].mean().reset_index()
+        ad.columns = ["Shipper", "Avg Delay (days)"]
+        bar_colors = [C_GREEN if x <= 0 else C_RED for x in ad["Avg Delay (days)"]]
+        fig = go.Figure(go.Bar(
+            x=ad["Shipper"], y=ad["Avg Delay (days)"],
+            marker_color=bar_colors,
+            text=ad["Avg Delay (days)"].round(1),
+            textposition="outside"
+        ))
+        fig.add_hline(y=0, line_dash="dash", line_color="#9CA3AF", opacity=0.6)
+        fig.update_layout(title="Average Delivery Delay by Shipper (days)")
+        # FIX: padding y-axis agar label "outside" tidak terpotong
+        fig.update_layout(yaxis=dict(range=[
+            min(ad["Avg Delay (days)"].min() * 1.3, -1),
+            ad["Avg Delay (days)"].max() * 1.4
+        ]))
+        st.plotly_chart(style(fig, 320, False), use_container_width=True)
 
-# ─── FOOTER ───────────────────────────────────────────────────────────────────
+    # FIX: rotated_labels=True untuk label bulan yang padat
+    emp_time = dff.groupby(["month","employeeName"])["revenue"].sum().reset_index().sort_values("month")
+    fig = px.line(emp_time, x="month", y="revenue", color="employeeName",
+                  title="Monthly Revenue per Employee — Performance Trend",
+                  color_discrete_sequence=PALETTE_DIV)
+    fig.update_layout(xaxis_tickangle=-45)
+    fig.update_yaxes(tickprefix="$")
+    st.plotly_chart(style(fig, 300, True, rotated_labels=True), use_container_width=True)
+
 st.markdown("---")
 st.markdown(
-    "<div style='text-align:center; color:#9AA0A6; font-size:12px;'>"
-    "📦 Northwind Traders Analytics Dashboard &nbsp;|&nbsp; Built with Streamlit & Plotly &nbsp;|&nbsp; Data: 2013–2015"
-    "</div>", unsafe_allow_html=True
+    "<div style='text-align:center;color:#9CA3AF;font-size:11px;padding:6px 0;'>"
+    "Northwind Traders Analytics Dashboard | Streamlit + Plotly | Data: 2013-2015"
+    "</div>",
+    unsafe_allow_html=True
 )
