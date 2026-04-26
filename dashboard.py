@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    if st.button("Refresh Data"):
+    if st.button("🔄 Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 
@@ -41,38 +41,6 @@ st.markdown("""
     }
     section[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.25) !important; }
 
-    /* SCORECARD FIX */
-    div[data-testid="metric-container"] {
-        background-color: #FFFFFF !important;
-        background: #FFFFFF !important;
-        border: 1px solid #D1D5DB !important;
-        border-top: 3px solid #1565C0 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
-        padding: 14px 18px !important;
-    }
-    div[data-testid="metric-container"] * {
-        color: #111827 !important;
-    }
-    div[data-testid="metric-container"] label {
-        color: #6B7280 !important;
-        font-size: 11px !important;
-        font-weight: 600 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-    }
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        color: #111827 !important;
-        font-size: clamp(16px, 1.8vw, 26px) !important;
-        font-weight: 800 !important;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    div[data-testid="metric-container"] div[data-testid="stMetricDelta"] {
-        color: #374151 !important;
-    }
-
     div[data-testid="stPlotlyChart"] {
         border: 1px solid #E5E7EB;
         border-radius: 8px;
@@ -87,14 +55,33 @@ st.markdown("""
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 def clean_str(s):
-    """Hapus semua karakter invisible/non-printable dari string."""
     if not isinstance(s, str):
         return s
     s = unicodedata.normalize("NFKC", s)
     s = ''.join(c for c in s if c.isprintable())
     return s.strip()
 
-@st.cache_data(ttl=0)
+def kpi_card(label, value, cols):
+    """Render KPI card pakai HTML murni — tidak terpengaruh versi Streamlit."""
+    html = f"""
+    <div style="
+        background:#FFFFFF;
+        border:1px solid #D1D5DB;
+        border-top:3px solid #1565C0;
+        border-radius:8px;
+        box-shadow:0 1px 4px rgba(0,0,0,0.08);
+        padding:16px 18px;
+        min-height:80px;
+    ">
+        <div style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;
+                    letter-spacing:0.06em;margin-bottom:6px;">{label}</div>
+        <div style="font-size:clamp(18px,1.8vw,26px);font-weight:800;color:#111827;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{value}</div>
+    </div>
+    """
+    cols.markdown(html, unsafe_allow_html=True)
+
+@st.cache_data
 def load_data():
     orders        = pd.read_csv(os.path.join(BASE, "orders.csv"),        encoding="latin-1")
     order_details = pd.read_csv(os.path.join(BASE, "order_details.csv"), encoding="latin-1")
@@ -106,10 +93,7 @@ def load_data():
 
     customers.columns  = customers.columns.str.strip()
     categories.columns = categories.columns.str.strip()
-
-    # FIX AGRESIF: hapus semua karakter invisible dari categoryName
     categories["categoryName"] = categories["categoryName"].apply(clean_str)
-
     customers = customers.rename(columns={"city": "customer_city", "country": "customer_country"})
 
     orders["orderDate"]    = pd.to_datetime(orders["orderDate"])
@@ -133,62 +117,40 @@ def load_data():
 
 df, orders, shippers = load_data()
 
-C_BLUE_DARK   = "#0D47A1"
-C_BLUE        = "#1565C0"
-C_BLUE_MID    = "#1976D2"
-C_BLUE_LIGHT  = "#2196F3"
-C_BLUE_SOFT   = "#42A5F5"
-C_RED         = "#C62828"
-C_GREEN       = "#2E7D32"
-C_ORANGE      = "#E65100"
-C_TEAL        = "#00695C"
-C_PURPLE      = "#4527A0"
-C_TEXT        = "#111827"
-C_TEXT_MUTED  = "#6B7280"
+C_BLUE_DARK  = "#0D47A1"
+C_BLUE       = "#1565C0"
+C_BLUE_MID   = "#1976D2"
+C_BLUE_LIGHT = "#2196F3"
+C_BLUE_SOFT  = "#42A5F5"
+C_RED        = "#C62828"
+C_GREEN      = "#2E7D32"
+C_ORANGE     = "#E65100"
+C_TEAL       = "#00695C"
+C_PURPLE     = "#4527A0"
+C_TEXT       = "#111827"
+C_TEXT_MUTED = "#6B7280"
 
 PALETTE_DIV = [C_BLUE_DARK, C_BLUE_MID, C_BLUE_LIGHT, C_TEAL, C_PURPLE, C_ORANGE, C_RED, "#37474F"]
 
-LEGEND_STYLE = dict(
-    bgcolor="rgba(0,0,0,0)",
-    borderwidth=0,
-    font=dict(size=11, color=C_TEXT)
-)
+LEGEND_STYLE = dict(bgcolor="rgba(0,0,0,0)", borderwidth=0, font=dict(size=11, color=C_TEXT))
 
 def colorbar_cfg(title=""):
-    return dict(
-        title=title,
-        tickfont=dict(color=C_TEXT_MUTED, size=11),
-        title_font=dict(color=C_TEXT_MUTED, size=11)
-    )
+    return dict(title=title, tickfont=dict(color=C_TEXT_MUTED, size=11), title_font=dict(color=C_TEXT_MUTED, size=11))
 
 def style(fig, height=360, showlegend=True, rotated_labels=False):
     bottom_margin = 60 if rotated_labels else 8
     fig.update_layout(
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#FFFFFF", paper_bgcolor="#FFFFFF",
         font=dict(family="Inter, Arial, sans-serif", size=12, color=C_TEXT),
-        height=height,
-        margin=dict(l=8, r=8, t=44, b=bottom_margin),
+        height=height, margin=dict(l=8, r=8, t=44, b=bottom_margin),
         title_font=dict(size=13, color=C_TEXT, family="Inter, Arial, sans-serif"),
-        showlegend=showlegend,
-        legend=LEGEND_STYLE
+        showlegend=showlegend, legend=LEGEND_STYLE
     )
-    fig.update_xaxes(
-        showgrid=True, gridcolor="#F3F4F6", linecolor="#E5E7EB",
-        tickfont=dict(size=11, color=C_TEXT_MUTED),
-        title_font=dict(color=C_TEXT_MUTED)
-    )
-    fig.update_yaxes(
-        showgrid=True, gridcolor="#F3F4F6", linecolor="#E5E7EB",
-        tickfont=dict(size=11, color=C_TEXT_MUTED),
-        title_font=dict(color=C_TEXT_MUTED)
-    )
-    fig.update_coloraxes(
-        colorbar=dict(
-            tickfont=dict(color=C_TEXT_MUTED, size=11),
-            title_font=dict(color=C_TEXT_MUTED, size=11)
-        )
-    )
+    fig.update_xaxes(showgrid=True, gridcolor="#F3F4F6", linecolor="#E5E7EB",
+                     tickfont=dict(size=11, color=C_TEXT_MUTED), title_font=dict(color=C_TEXT_MUTED))
+    fig.update_yaxes(showgrid=True, gridcolor="#F3F4F6", linecolor="#E5E7EB",
+                     tickfont=dict(size=11, color=C_TEXT_MUTED), title_font=dict(color=C_TEXT_MUTED))
+    fig.update_coloraxes(colorbar=dict(tickfont=dict(color=C_TEXT_MUTED, size=11), title_font=dict(color=C_TEXT_MUTED, size=11)))
     return fig
 
 def page_header(title, subtitle=""):
@@ -199,6 +161,7 @@ def page_header(title, subtitle=""):
         unsafe_allow_html=True
     )
 
+# ── SIDEBAR ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div style="font-size:16px;font-weight:700;letter-spacing:0.02em;margin-bottom:2px;">Northwind Traders</div>', unsafe_allow_html=True)
     st.markdown('<div style="font-size:11px;opacity:0.75;margin-bottom:12px;">Business Analytics Dashboard</div>', unsafe_allow_html=True)
@@ -227,6 +190,7 @@ with st.sidebar:
     st.markdown(f'<div style="font-size:11px;opacity:0.8;">Period: {df["orderDate"].min().strftime("%b %Y")} - {df["orderDate"].max().strftime("%b %Y")}</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="font-size:11px;opacity:0.8;">Total Records: {len(df):,}</div>', unsafe_allow_html=True)
 
+# ── FILTERS ───────────────────────────────────────────────────────────────────
 dff = df.copy()
 if sel_year    != "All": dff = dff[dff["year"].astype(str) == sel_year]
 if sel_country != "All": dff = dff[dff["customer_country"] == sel_country]
@@ -236,6 +200,9 @@ if dff.empty:
     st.warning("⚠️ Tidak ada data untuk kombinasi filter yang dipilih. Coba ubah filter di sidebar.")
     st.stop()
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 1 — EXECUTIVE SUMMARY
+# ══════════════════════════════════════════════════════════════════════════════
 if page == "Executive Summary":
     page_header("Executive Summary", "High-level business performance overview")
 
@@ -247,12 +214,12 @@ if page == "Executive Summary":
     avg_freight  = dff.drop_duplicates("orderID")["freight"].mean()
 
     k1,k2,k3,k4,k5,k6 = st.columns(6)
-    k1.metric("Total Revenue",    f"${total_rev:,.0f}")
-    k2.metric("Total Orders",     f"{total_orders:,}")
-    k3.metric("Active Customers", f"{total_cust:,}")
-    k4.metric("Avg Order Value",  f"${avg_ov:,.0f}")
-    k5.metric("Units Sold",       f"{total_qty:,}")
-    k6.metric("Avg Freight Cost", f"${avg_freight:,.2f}")
+    kpi_card("Total Revenue",    f"${total_rev:,.0f}",    k1)
+    kpi_card("Total Orders",     f"{total_orders:,}",     k2)
+    kpi_card("Active Customers", f"{total_cust:,}",       k3)
+    kpi_card("Avg Order Value",  f"${avg_ov:,.0f}",       k4)
+    kpi_card("Units Sold",       f"{total_qty:,}",        k5)
+    kpi_card("Avg Freight Cost", f"${avg_freight:,.2f}",  k6)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -265,9 +232,7 @@ if page == "Executive Summary":
             mode="lines+markers",
             line=dict(color=C_BLUE, width=2.5),
             marker=dict(size=5, color=C_BLUE),
-            fill="tozeroy",
-            fillcolor="rgba(21,101,192,0.10)",
-            name="Revenue"
+            fill="tozeroy", fillcolor="rgba(21,101,192,0.10)", name="Revenue"
         ))
         fig.update_layout(title="Monthly Revenue Trend", showlegend=False, xaxis_tickangle=-45)
         st.plotly_chart(style(fig, 320, False, rotated_labels=True), use_container_width=True)
@@ -278,10 +243,8 @@ if page == "Executive Summary":
                      title="Revenue by Category",
                      color_discrete_sequence=PALETTE_DIV, hole=0.42)
         fig.update_traces(
-            textposition="auto",
-            textinfo="percent+label",
-            textfont=dict(size=10, color=C_TEXT),
-            insidetextorientation="radial"
+            textposition="auto", textinfo="percent+label",
+            textfont=dict(size=10, color=C_TEXT), insidetextorientation="radial"
         )
         st.plotly_chart(style(fig, 320), use_container_width=True)
 
@@ -302,15 +265,18 @@ if page == "Executive Summary":
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(style(fig, 360, False, rotated_labels=True), use_container_width=True)
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 2 — PRODUCT ANALYSIS
+# ══════════════════════════════════════════════════════════════════════════════
 elif page == "Product Analysis":
     page_header("Product & Category Analysis",
                 "Identify best-performing products, high-discount items, and discontinued risk")
 
     k1,k2,k3,k4 = st.columns(4)
-    k1.metric("Total Products",  f"{dff['productName'].nunique():,}")
-    k2.metric("Categories",      f"{dff['categoryName'].nunique():,}")
-    k3.metric("Avg Discount",    f"{dff['discount'].mean()*100:.1f}%")
-    k4.metric("Active Products", f"{dff[dff['discontinued']==0]['productName'].nunique():,}")
+    kpi_card("Total Products",  f"{dff['productName'].nunique():,}",               k1)
+    kpi_card("Categories",      f"{dff['categoryName'].nunique():,}",              k2)
+    kpi_card("Avg Discount",    f"{dff['discount'].mean()*100:.1f}%",              k3)
+    kpi_card("Active Products", f"{dff[dff['discontinued']==0]['productName'].nunique():,}", k4)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -340,8 +306,7 @@ elif page == "Product Analysis":
                          hover_name="productName", size="qty", color="categoryName",
                          title="Discount Rate vs Revenue — Spot Overpriced Discounts",
                          labels={"avg_discount":"Avg Discount Rate","revenue":"Total Revenue"},
-                         color_discrete_sequence=PALETTE_DIV,
-                         size_max=40)
+                         color_discrete_sequence=PALETTE_DIV, size_max=40)
         fig.update_traces(marker=dict(opacity=0.80, line=dict(width=1.2, color="rgba(55,65,81,0.4)")))
         fig.update_xaxes(tickformat=".0%")
         fig.update_yaxes(tickprefix="$")
@@ -354,10 +319,8 @@ elif page == "Product Analysis":
                      title="Active vs Discontinued Revenue",
                      color_discrete_sequence=[C_BLUE, C_RED], hole=0.45)
         fig.update_traces(
-            textposition="auto",
-            textinfo="percent+label",
-            textfont=dict(size=11, color=C_TEXT),
-            insidetextorientation="radial"
+            textposition="auto", textinfo="percent+label",
+            textfont=dict(size=11, color=C_TEXT), insidetextorientation="radial"
         )
         st.plotly_chart(style(fig, 380), use_container_width=True)
 
@@ -370,14 +333,17 @@ elif page == "Product Analysis":
     fig.update_yaxes(tickprefix="$")
     st.plotly_chart(style(fig, 300, True, rotated_labels=True), use_container_width=True)
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 3 — CUSTOMER ANALYSIS
+# ══════════════════════════════════════════════════════════════════════════════
 elif page == "Customer Analysis":
     page_header("Customer Analysis",
                 "Identify most valuable customers and high-potential markets")
 
     k1,k2,k3 = st.columns(3)
-    k1.metric("Total Customers",     f"{dff['customerID'].nunique():,}")
-    k2.metric("Countries Served",    f"{dff['customer_country'].nunique():,}")
-    k3.metric("Avg Orders/Customer", f"{dff.groupby('customerID')['orderID'].nunique().mean():.1f}")
+    kpi_card("Total Customers",     f"{dff['customerID'].nunique():,}",                                  k1)
+    kpi_card("Countries Served",    f"{dff['customer_country'].nunique():,}",                            k2)
+    kpi_card("Avg Orders/Customer", f"{dff.groupby('customerID')['orderID'].nunique().mean():.1f}", k3)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -401,10 +367,7 @@ elif page == "Customer Analysis":
                      color="total_orders",
                      color_continuous_scale=[[0, C_BLUE_SOFT],[0.5, C_BLUE],[1, C_BLUE_DARK]])
         fig.update_yaxes(tickprefix="$")
-        fig.update_layout(
-            xaxis_tickangle=-30,
-            coloraxis_colorbar=colorbar_cfg("Orders")
-        )
+        fig.update_layout(xaxis_tickangle=-30, coloraxis_colorbar=colorbar_cfg("Orders"))
         st.plotly_chart(style(fig, 400, True, rotated_labels=True), use_container_width=True)
 
     col1, col2 = st.columns([3, 2])
@@ -428,11 +391,13 @@ elif page == "Customer Analysis":
         fdist.columns = ["Range","Count"]
         n = len(fdist)
         bar_colors = [C_BLUE_DARK, C_BLUE, C_BLUE_MID, C_BLUE_LIGHT, C_BLUE_SOFT][:n]
-        fig = px.bar(fdist, x="Range", y="Count",
-                     title="Customer Order Frequency Segmentation")
+        fig = px.bar(fdist, x="Range", y="Count", title="Customer Order Frequency Segmentation")
         fig.update_traces(marker_color=bar_colors)
         st.plotly_chart(style(fig, 360, False), use_container_width=True)
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 4 — OPERATIONS PERFORMANCE
+# ══════════════════════════════════════════════════════════════════════════════
 elif page == "Operations Performance":
     page_header("Operations Performance",
                 "Evaluate employee contribution, shipper reliability, and delivery efficiency")
@@ -445,10 +410,10 @@ elif page == "Operations Performance":
     late_count  = (ship_df["delay_days"] > 0).sum()
 
     k1,k2,k3,k4 = st.columns(4)
-    k1.metric("Total Employees",  f"{dff['employeeID'].nunique():,}")
-    k2.metric("Shippers",         "3")
-    k3.metric("On-Time Delivery", f"{on_time_pct:.1f}%")
-    k4.metric("Late Deliveries",  f"{late_count:,}")
+    kpi_card("Total Employees",  f"{dff['employeeID'].nunique():,}", k1)
+    kpi_card("Shippers",         "3",                                k2)
+    kpi_card("On-Time Delivery", f"{on_time_pct:.1f}%",             k3)
+    kpi_card("Late Deliveries",  f"{late_count:,}",                 k4)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
