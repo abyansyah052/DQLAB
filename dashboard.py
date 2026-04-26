@@ -10,6 +10,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+with st.sidebar:
+    if st.button("🔄 Refresh Data"):
+        st.cache_data.clear()
+        st.rerun()
+
 st.markdown("""
 <style>
     .stApp { background-color: #FFFFFF; }
