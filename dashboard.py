@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    if st.button("🔄 Refresh Data"):
+    if st.button("Refresh Data"):
         st.cache_data.clear()
         st.rerun()
 
