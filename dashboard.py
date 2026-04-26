@@ -3,6 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import os
+import unicodedata
 
 st.set_page_config(
     page_title="Northwind Traders Analytics",
@@ -40,14 +41,18 @@ st.markdown("""
     }
     section[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.25) !important; }
 
-    /* ── SCORECARD: background putih, teks hitam, shadow tipis ── */
+    /* SCORECARD FIX */
     div[data-testid="metric-container"] {
-        background: #FFFFFF;
-        border: 1px solid #D1D5DB;
-        border-top: 3px solid #1565C0;
-        border-radius: 8px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-        padding: 14px 18px;
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        border: 1px solid #D1D5DB !important;
+        border-top: 3px solid #1565C0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.10) !important;
+        padding: 14px 18px !important;
+    }
+    div[data-testid="metric-container"] * {
+        color: #111827 !important;
     }
     div[data-testid="metric-container"] label {
         color: #6B7280 !important;
@@ -81,7 +86,15 @@ st.markdown("""
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
-@st.cache_data
+def clean_str(s):
+    """Hapus semua karakter invisible/non-printable dari string."""
+    if not isinstance(s, str):
+        return s
+    s = unicodedata.normalize("NFKC", s)
+    s = ''.join(c for c in s if c.isprintable())
+    return s.strip()
+
+@st.cache_data(ttl=0)
 def load_data():
     orders        = pd.read_csv(os.path.join(BASE, "orders.csv"),        encoding="latin-1")
     order_details = pd.read_csv(os.path.join(BASE, "order_details.csv"), encoding="latin-1")
@@ -92,9 +105,10 @@ def load_data():
     shippers      = pd.read_csv(os.path.join(BASE, "shippers.csv"),      encoding="latin-1")
 
     customers.columns  = customers.columns.str.strip()
-    # FIX: strip whitespace di categoryName agar tidak duplikat di legend
     categories.columns = categories.columns.str.strip()
-    categories["categoryName"] = categories["categoryName"].str.strip()
+
+    # FIX AGRESIF: hapus semua karakter invisible dari categoryName
+    categories["categoryName"] = categories["categoryName"].apply(clean_str)
 
     customers = customers.rename(columns={"city": "customer_city", "country": "customer_country"})
 
@@ -119,7 +133,6 @@ def load_data():
 
 df, orders, shippers = load_data()
 
-# ── COLOR CONSTANTS ──────────────────────────────────────────────────────────
 C_BLUE_DARK   = "#0D47A1"
 C_BLUE        = "#1565C0"
 C_BLUE_MID    = "#1976D2"
@@ -186,7 +199,6 @@ def page_header(title, subtitle=""):
         unsafe_allow_html=True
     )
 
-# ── SIDEBAR ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div style="font-size:16px;font-weight:700;letter-spacing:0.02em;margin-bottom:2px;">Northwind Traders</div>', unsafe_allow_html=True)
     st.markdown('<div style="font-size:11px;opacity:0.75;margin-bottom:12px;">Business Analytics Dashboard</div>', unsafe_allow_html=True)
@@ -215,7 +227,6 @@ with st.sidebar:
     st.markdown(f'<div style="font-size:11px;opacity:0.8;">Period: {df["orderDate"].min().strftime("%b %Y")} - {df["orderDate"].max().strftime("%b %Y")}</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="font-size:11px;opacity:0.8;">Total Records: {len(df):,}</div>', unsafe_allow_html=True)
 
-# ── APPLY FILTERS ─────────────────────────────────────────────────────────────
 dff = df.copy()
 if sel_year    != "All": dff = dff[dff["year"].astype(str) == sel_year]
 if sel_country != "All": dff = dff[dff["customer_country"] == sel_country]
@@ -225,9 +236,6 @@ if dff.empty:
     st.warning("⚠️ Tidak ada data untuk kombinasi filter yang dipilih. Coba ubah filter di sidebar.")
     st.stop()
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 1 — EXECUTIVE SUMMARY
-# ══════════════════════════════════════════════════════════════════════════════
 if page == "Executive Summary":
     page_header("Executive Summary", "High-level business performance overview")
 
@@ -294,9 +302,6 @@ if page == "Executive Summary":
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(style(fig, 360, False, rotated_labels=True), use_container_width=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 2 — PRODUCT ANALYSIS
-# ══════════════════════════════════════════════════════════════════════════════
 elif page == "Product Analysis":
     page_header("Product & Category Analysis",
                 "Identify best-performing products, high-discount items, and discontinued risk")
@@ -365,9 +370,6 @@ elif page == "Product Analysis":
     fig.update_yaxes(tickprefix="$")
     st.plotly_chart(style(fig, 300, True, rotated_labels=True), use_container_width=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 3 — CUSTOMER ANALYSIS
-# ══════════════════════════════════════════════════════════════════════════════
 elif page == "Customer Analysis":
     page_header("Customer Analysis",
                 "Identify most valuable customers and high-potential markets")
@@ -431,9 +433,6 @@ elif page == "Customer Analysis":
         fig.update_traces(marker_color=bar_colors)
         st.plotly_chart(style(fig, 360, False), use_container_width=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE 4 — OPERATIONS PERFORMANCE
-# ══════════════════════════════════════════════════════════════════════════════
 elif page == "Operations Performance":
     page_header("Operations Performance",
                 "Evaluate employee contribution, shipper reliability, and delivery efficiency")
