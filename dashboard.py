@@ -35,11 +35,13 @@ st.markdown("""
     }
     section[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.25) !important; }
 
+    /* ── SCORECARD: background putih, teks hitam, shadow tipis ── */
     div[data-testid="metric-container"] {
-        background: #F0F7FF;
-        border: 1px solid #BFDBFE;
+        background: #FFFFFF;
+        border: 1px solid #D1D5DB;
         border-top: 3px solid #1565C0;
         border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         padding: 14px 18px;
     }
     div[data-testid="metric-container"] label {
@@ -57,7 +59,6 @@ st.markdown("""
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    /* FIX: metric delta text warna eksplisit */
     div[data-testid="metric-container"] div[data-testid="stMetricDelta"] {
         color: #374151 !important;
     }
@@ -85,7 +86,11 @@ def load_data():
     employees     = pd.read_csv(os.path.join(BASE, "employees.csv"),     encoding="latin-1")
     shippers      = pd.read_csv(os.path.join(BASE, "shippers.csv"),      encoding="latin-1")
 
-    customers.columns = customers.columns.str.strip()
+    customers.columns  = customers.columns.str.strip()
+    # FIX: strip whitespace di categoryName agar tidak duplikat di legend
+    categories.columns = categories.columns.str.strip()
+    categories["categoryName"] = categories["categoryName"].str.strip()
+
     customers = customers.rename(columns={"city": "customer_city", "country": "customer_country"})
 
     orders["orderDate"]    = pd.to_datetime(orders["orderDate"])
@@ -120,20 +125,17 @@ C_GREEN       = "#2E7D32"
 C_ORANGE      = "#E65100"
 C_TEAL        = "#00695C"
 C_PURPLE      = "#4527A0"
-C_TEXT        = "#111827"   # warna teks utama — dipakai di semua label chart
-C_TEXT_MUTED  = "#6B7280"   # warna teks sekunder
+C_TEXT        = "#111827"
+C_TEXT_MUTED  = "#6B7280"
 
 PALETTE_DIV = [C_BLUE_DARK, C_BLUE_MID, C_BLUE_LIGHT, C_TEAL, C_PURPLE, C_ORANGE, C_RED, "#37474F"]
 
-# ── LEGEND CONFIG — satu tempat, warna eksplisit ─────────────────────────────
-# FIX: font color #111827 agar legend tidak putih di atas background putih
 LEGEND_STYLE = dict(
     bgcolor="rgba(0,0,0,0)",
     borderwidth=0,
-    font=dict(size=11, color=C_TEXT)   # ← EKSPLISIT HITAM
+    font=dict(size=11, color=C_TEXT)
 )
 
-# FIX: colorbar config — font color eksplisit agar label tidak putih
 def colorbar_cfg(title=""):
     return dict(
         title=title,
@@ -141,7 +143,6 @@ def colorbar_cfg(title=""):
         title_font=dict(color=C_TEXT_MUTED, size=11)
     )
 
-# ── HELPER: style chart ───────────────────────────────────────────────────────
 def style(fig, height=360, showlegend=True, rotated_labels=False):
     bottom_margin = 60 if rotated_labels else 8
     fig.update_layout(
@@ -164,7 +165,6 @@ def style(fig, height=360, showlegend=True, rotated_labels=False):
         tickfont=dict(size=11, color=C_TEXT_MUTED),
         title_font=dict(color=C_TEXT_MUTED)
     )
-    # FIX: colorbar font color eksplisit untuk semua chart yang punya coloraxis
     fig.update_coloraxes(
         colorbar=dict(
             tickfont=dict(color=C_TEXT_MUTED, size=11),
@@ -267,7 +267,6 @@ if page == "Executive Summary":
         fig.update_traces(
             textposition="auto",
             textinfo="percent+label",
-            # FIX: teks label di dalam/luar pie pakai warna gelap agar terbaca di slice terang
             textfont=dict(size=10, color=C_TEXT),
             insidetextorientation="radial"
         )
@@ -397,7 +396,7 @@ elif page == "Customer Analysis":
         fig.update_yaxes(tickprefix="$")
         fig.update_layout(
             xaxis_tickangle=-30,
-            coloraxis_colorbar=colorbar_cfg("Orders")   # FIX: colorbar font hitam
+            coloraxis_colorbar=colorbar_cfg("Orders")
         )
         st.plotly_chart(style(fig, 400, True, rotated_labels=True), use_container_width=True)
 
@@ -409,9 +408,8 @@ elif page == "Customer Analysis":
                             color_continuous_scale=[[0,"#90CAF9"],[0.5,C_BLUE_MID],[1,C_BLUE_DARK]])
         fig.update_layout(
             geo=dict(showframe=False, showcoastlines=True, coastlinecolor="#D1D5DB", bgcolor="white"),
-            coloraxis_colorbar=colorbar_cfg("Revenue")  # FIX: colorbar font hitam
+            coloraxis_colorbar=colorbar_cfg("Revenue")
         )
-        # FIX: colorbar tickprefix terpisah karena colorbar_cfg tidak support tickprefix
         fig.update_coloraxes(colorbar_tickprefix="$")
         st.plotly_chart(style(fig, 360), use_container_width=True)
 
@@ -489,7 +487,6 @@ elif page == "Operations Performance":
             marker_color=bar_colors_delay,
             text=ad["Avg Delay (days)"].round(1),
             textposition="outside",
-            # FIX: teks label di luar bar warna gelap agar terbaca di bg putih
             textfont=dict(color=C_TEXT, size=12)
         ))
         fig.add_hline(y=0, line_dash="dash", line_color="#9CA3AF", opacity=0.6)
