@@ -240,13 +240,24 @@ if page == "Executive Summary":
     with col2:
         cat_rev = dff.groupby("categoryName")["revenue"].sum().reset_index().sort_values("revenue", ascending=False)
         fig = px.pie(cat_rev, names="categoryName", values="revenue",
-                     title="Revenue by Category",
-                     color_discrete_sequence=PALETTE_DIV, hole=0.42)
+             title="Revenue by Category",
+             color_discrete_sequence=PALETTE_DIV, hole=0.42)
         fig.update_traces(
-            textposition="auto", textinfo="percent+label",
-            textfont=dict(size=10, color=C_TEXT), insidetextorientation="radial"
+            textposition="auto",
+            textinfo="percent+label",
+            textfont=dict(size=10, color=C_TEXT),
+            insidetextorientation="radial"
         )
-        st.plotly_chart(style(fig, 320), use_container_width=True)
+        fig.update_layout(
+            legend=dict(
+                orientation="h",
+                yanchor="bottom", y=-0.35,
+                xanchor="center", x=0.5,
+                font=dict(size=10),
+                bgcolor="rgba(0,0,0,0)"
+            )
+        )
+        st.plotly_chart(style(fig, 420), use_container_width=True)
 
     col1, col2 = st.columns(2)
     with col1:
