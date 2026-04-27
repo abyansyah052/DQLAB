@@ -18,6 +18,20 @@ with st.sidebar:
 
 st.markdown("""
 <style>
+    /* Button Refresh Data di sidebar */
+    section[data-testid="stSidebar"] .stButton button {
+        background: rgba(255,255,255,0.15) !important;
+        border: 1px solid rgba(255,255,255,0.5) !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        width: 100% !important;
+        transition: background 0.2s;
+    }
+    section[data-testid="stSidebar"] .stButton button:hover {
+        background: rgba(255,255,255,0.28) !important;
+        border-color: rgba(255,255,255,0.8) !important;
+    }
     .stApp { background-color: #FFFFFF; }
 
     section[data-testid="stSidebar"] {
